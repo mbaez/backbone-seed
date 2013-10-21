@@ -1,0 +1,25 @@
+<!-- group1/table-tmpl-->
+<form role="form">
+    <div class="form-group">
+        <label for="input-name">Nombre</label>
+        <input id="input-name" type="text" class="form-control" placeholder="Text input" >
+        <a id="buscar-datos" class="btn btn-primary"><span class="icon-search"></span> Buscar</a>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Edad</th>
+      </tr>
+    </thead>
+    <tbody>
+        <% _.forEach(data.collection, function(user){%>
+          <tr>
+            <td><%=user.nombre%></td>
+            <td><%=user.edad%></td>
+          </tr>
+        <%});%>
+    </tbody>
+</table>
+<!-- fin de group1/table-tmpl-->
