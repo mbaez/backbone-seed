@@ -8,23 +8,24 @@
  *
  * @author <a href="mailto:mxbg.py@gmail.com">Maximiliano Báez</a>
  */
-var Backbone.Callback = {
+Backbone.Callback = {
     /**
      * Handler del success de una petición, dispara el evento `ready` para
      * que sea manejado por el objeto de origen.
      *
      * @author <a href="mailto:mxbg.py@gmail.com">Maximiliano Báez</a>
      */
-    success : function(data,response,options){
+    success : function(target,response,options){
         var params ={};
-        params.data =  data;
+        params.target =  target;
         params.response = response;
         params.options = options;
         //se cachean los datos
         if(this.cache != false){
-            memoryStorage.set(data.url(), params);
+            Backbone.Cache.set(target.url(), params);
         }
-        data.trigger('ready',params);
+        //~ Se dispara el evento ready
+        target.trigger('ready',params);
     },
 
     /**
@@ -33,12 +34,13 @@ var Backbone.Callback = {
      *
      * @author <a href="mailto:mxbg.py@gmail.com">Maximiliano Báez</a>
      */
-    error : function(data, xhr, options){
+    error : function(target, xhr, options){
         var resp = {}
-        resp.data = data;
+        resp.target = target;
         resp.xhr = xhr;
-        resp.options = options
-        data.trigger('error', resp);
+        resp.options = options;
+        //~ Se dispara el evento error
+        target.trigger('error', resp);
     }
 }
 
@@ -81,20 +83,12 @@ Backbone.View.prototype.alert = function(options){
  * @author <a href="mailto:mxbg.py@gmail.com">Maximiliano Báez</a>
  */
 Backbone.View.prototype.error = function(data){
-    var response;
-    try{
-        response = JSON.parse(data.xhr.responseText);
-    } catch(e) {
-        response = {
-            mensaje : data.xhr.responseText
-        }
-    }
+    var mensaje = "Error genérico";
     //se construye el alert
     this.alert({
-        mensaje :  response.mensaje,
+        mensaje : mensaje,
         type : "error"
     });
-    this.render();
 };
 
 /**
@@ -117,9 +111,9 @@ _.each(["Model", "Collection"], function(name) {
         var key = this.url();
         // Trigger the fetch event on the instance.
         this.trigger("fetch", this);
-        if(this.cache != false && memoryStorage.contains(key)){
+        if(this.cache != false && Backbone.Cache.contains(key)){
             //se obtiene el valor de memoria
-            var cacheData = memoryStorage.get(key);
+            var cacheData = Backbone.Cache.get(key);
             //se setan los atributos la objeto actual
             if(typeof this.models != "undefined"){
                 this.add(cacheData.data.toJSON());
@@ -139,21 +133,8 @@ _.each(["Model", "Collection"], function(name) {
         var xhr = super_fetch.apply(this, arguments);
         //se encarga de recolectar datos del objeto para utilizarlos en
         //el abort de page
-        memoryStorage.append('xhr', xhr);
-        memoryStorage.append('collector', this);
-        return xhr;
-    };
-    // Override the save method to emit a save event.
-    clazz.prototype.save = function() {
-        // Trigger the save event on the instance.
-        this.trigger("save", this);
-        // Pass through to original save.
-        var xhr = super_save.apply(this, arguments);
-        //se encarga de recolectar datos del objeto para utilizarlos en
-        //el abort de page
-        memoryStorage.append('xhr', xhr);
-        memoryStorage.append('collector', this);
-
+        Backbone.Cache.append('xhr', xhr);
+        Backbone.Cache.append('collector', this);
         return xhr;
     };
 });
@@ -166,7 +147,7 @@ _.each(["Model", "Collection"], function(name) {
  *
  * @author <a href="mailto:mxbg.py@gmail.com">Maximiliano Báez</a>
  */
-Backbone.Collection.prototype.pagination = function(callback) {
+Backbone.Collection.prototype.pagination = function() {
 
     if(typeof this.pagerBaseUrl == "undefined"){
         this.pagerBaseUrl = this.url();
@@ -190,7 +171,7 @@ Backbone.Collection.prototype.pagination = function(callback) {
         return baseUrl+ and +"registros="+this.registros +"&inicio="+this.inicio;
     }
     //se realiza el fetch a la url actualizada
-    return this.fetch(callback);
+    return this.fetch(Backbone.Callback);
 };
 
 /**
@@ -223,7 +204,6 @@ Backbone.View.prototype.close = function(options){
     this.$el.removeData().unbind();
 };
 
-
 /**
  * Namespace que contiene los métodos para configurar la aplicación.
  * @namespace
@@ -247,7 +227,7 @@ Setup = {
      * @private
      */
     urlError : function() {
-        throw new Error('A "url" property or function must be specified');
+        throw new Error('Debe proveer una URL');
     },
 
     /**
